@@ -33,7 +33,7 @@ class ModBot(discord.Client):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(command_prefix=".", intents=intents)
-        self.group_num = None
+        self.group_num = 27
         self.mod_channels = {}  # Map from guild to the mod channel id for that guild
         self.reports = {}  # Map from user IDs to the state of their report
 
@@ -80,6 +80,17 @@ class ModBot(discord.Client):
             reply += "Use the `cancel` command to cancel the report process.\n"
             await message.channel.send(reply)
             return
+
+        # Forward the message to the mod channel
+        # mod_channel = self.mod_channels[message.guild.id]
+        # TODO: hard-coding in paths to send report in group mod chat from DM
+        guild_id = 1211760623969370122 
+        mod_channel = self.mod_channels[guild_id]
+        await mod_channel.send(
+            f'Forwarded message:\n{message.author.name}: "{message.content}"'
+        )
+        scores = self.eval_text(message.content)
+        await mod_channel.send(self.code_format(scores))
 
         author_id = message.author.id
         responses = []
