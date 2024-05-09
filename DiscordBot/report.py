@@ -9,12 +9,14 @@ class State(Enum):
     MESSAGE_IDENTIFIED = auto()
     REPORT_COMPLETE = auto()
     AWAITING_CATEGORY = auto()
+    FINAL = auto()
 
 
 class Report:
     START_KEYWORD = "report"
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
+    CATEGORIES = "'option1', 'option2', or 'option3'"
 
     def __init__(self, client):
         self.state = State.REPORT_START
@@ -69,33 +71,41 @@ class Report:
             return [
                 "I found this message:",
                 "```" + message.author.name + ": " + message.content + "```",
-                "This is all I know how to do right now - it's up to you to build out the rest of my reporting flow!",
+                "Is this the message you'd like to report? Please respond with 'yes' or 'no'.",
             ]
 
         if self.state == State.MESSAGE_IDENTIFIED:
-            # move onto stage 2 of reporting flow
-            self.state = State.AWAITING_CATEGORY
-            return [
-                "What category would you like to report this message under? Please respond with 'option1', 'option2', etc."
-            ]
+            if message.content.lower() == "yes":
+                self.state = State.AWAITING_CATEGORY
+                return [
+                    "What category would you like to report this message under? Please respond with "
+                    + self.CATEGORIES
+                    + "."
+                ]
+            elif message.content.lower() == "no":
+                self.state = State.AWAITING_MESSAGE
+                return ["Please copy paste the link to the message you want to report."]
+            else:
+                return [
+                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                ]
 
         if self.state == State.AWAITING_CATEGORY:
-            # move onto stage 3 of reporting flow
-            # parse our category from response
-            # TODO: update regex
-            category = re.search("/(\d+)/(\d+)/(\d+)", message.content)
+            category = message.content
             if not category:
                 return [
-                    "I'm sorry, I couldn't understand the category. Please respond with 'option1', 'option2', etc."
+                    "I'm sorry, I couldn't understand the category. Please respond with "
+                    + self.CATEGORIES
+                    + "."
                 ]
 
             if category == "option1":
-                self.state = State.REPORT_COMPLETE
+                self.state = State.FINAL
                 return [
                     "You've selected option1. Please provide any additional details you'd like to include in your report."
                 ]
             elif category == "option2":
-                self.state = State.REPORT_COMPLETE
+                self.state = State.FINAL
                 return [
                     "You've selected option2. Please provide any additional details you'd like to include in your report."
                 ]
@@ -104,7 +114,9 @@ class Report:
                     "I'm sorry, I couldn't understand the category. Please respond with 'option1', 'option2', etc."
                 ]
 
-        if self.state == State.REPORT_COMPLETE:
+        if self.state == State.FINAL:
+            # TODO: fix
+            self.report_complete()
             return ["Thank you for your report. It has been submitted."]
 
         return []
