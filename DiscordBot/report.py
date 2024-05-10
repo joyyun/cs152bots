@@ -2,8 +2,6 @@ from enum import Enum, auto
 import discord
 import re
 
-# hello Thu!!!
-
 class State(Enum):
     REPORT_START = auto()
     AWAITING_MESSAGE = auto()
@@ -16,7 +14,10 @@ class State(Enum):
     AWAITING_ADDITIONAL_MESSAGE = auto()
     AWAITING_BLOCK = auto()
     CONFIRM_SUBMIT = auto()
-    FINAL = auto()
+    MODERATOR_REVIEW = auto()
+    AWAITING_ABUSE_VERIFICATION = auto()
+    MOD_COMPLETE = auto()
+    # FINAL = auto()
 
 
 class Report:
@@ -199,7 +200,7 @@ class Report:
         
         if self.state == State.CONFIRM_SUBMIT:
             if message.content.lower() == "yes":
-                self.state = State.FINAL
+                self.state = State.REPORT_COMPLETE
                 if self.imminent_danger:
                     return [
                         "Thank you for your report. It has been submitted. Due to the urgent nature of this case, it has been moved to the front of our priority queue."
@@ -218,11 +219,38 @@ class Report:
                     "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
                 ]
             
-        if self.state == State.FINAL:
-            # TODO: fix
-            self.report_complete()
+        # entering moderator flow below!
+        if self.state == State.MODERATOR_REVIEW:
+            self.state = State.AWAITING_ABUSE_VERIFICATION
+            return [
+                f"Please review the contents of ths report and decide if this is a safety violation. Respond with 'yes' or 'no'. \n Attached is the flagged message: {self.__dict__}"
+            ]
+        
+        if self.state == State.AWAITING_ABUSE_VERIFICATION:
+            if message.content.lower() == "yes":
+                self.state = State.MOD_COMPLETE
+                return [
+                    "This report is not an abuse violation. No further action is needed."
+                ]
+            elif message.content.lower() == "no":
+                self.state = State.MOD_COMPLETE
+                return [
+                    "This report is not an abuse violation. No further action is needed."
+                ]
+            else:
+                return [
+                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                ]
+            
+        # if self.state == State.REPORT_COMPLETE:
+        #     self.report_complete()
 
         return []
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
+    
+    def mod_complete(self):
+        return self.state == State.MOD_COMPLETE
+    
+

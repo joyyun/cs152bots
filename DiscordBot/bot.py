@@ -6,8 +6,9 @@ import json
 import logging
 import re
 import requests
-from report import Report
+from report import Report, State
 import pdb
+# from moderator import *
 
 # Set up logging to the console
 logger = logging.getLogger("discord")
@@ -109,11 +110,18 @@ class ModBot(discord.Client):
         # If the report is complete or cancelled, remove it from our map
         if self.reports[author_id].report_complete():
             # Forward the report to the mod channel
-            mod_channel = self.mod_channels[message.guild.id]
-            await mod_channel.send(
-                f'Completed report:\n{author_id}: "{self.reports[author_id]}"'
+            # mod_channel = self.mod_channels[message.guild.id]
+            # TODO: THIS IS HARDCODED
+            guild_id = 1211760623969370122 
+            mod_channel = self.mod_channels[guild_id]
+            await mod_channel.send( # TODO: parse this to print nicely
+                f'Report Submitted:\n{author_id}: "{self.reports[author_id].__dict__}"'
             )
-
+            await self.moderator_review(self.reports[author_id])
+            if self.reports[author_id].mod_complete():
+                await mod_channel.send( # TODO: parse this to print nicely
+                f'thank god'
+            )
             self.reports.pop(author_id)
 
     async def handle_channel_message(self, message):
@@ -143,6 +151,14 @@ class ModBot(discord.Client):
         shown in the mod channel.
         """
         return "Evaluated: '" + text + "'"
+    
+    async def moderator_review(self, report):
+        report.state = State.MODERATOR_REVIEW
+        responses = await report.handle_message(report.message)
+        for r in responses:
+            await report.message.mod_channel.send(r)
+
+        return
 
 
 client = ModBot()
