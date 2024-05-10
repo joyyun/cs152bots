@@ -2,6 +2,7 @@ from enum import Enum, auto
 import discord
 import re
 
+# hello Thu!!!
 
 class State(Enum):
     REPORT_START = auto()
