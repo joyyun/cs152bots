@@ -28,7 +28,7 @@ class Report:
         self.message = None
 
     async def handle_message(self, message):
-        print(self.state)
+        # print(self.state)
         """
         This function makes up the meat of the user-side reporting flow. It defines how we transition between states and what
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
@@ -110,9 +110,8 @@ class Report:
             elif category == "imminent danger":
                 self.state = State.IMMINENT_DANGER_SELECTION
                 return [
-                    f"Thank you for your urgency. You've selected: {category}. To further inform the action we should take, please select which category this falls under.
-                        Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of violence, or 'k' for kidnapping threat." 
-                        # TODO: maybe we should add an 'other' category here as well?
+                    f"Thank you for your urgency. You've selected: {category}. To further inform the action we should take, please select which category this falls under. Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of violence, or 'k' for kidnapping threat."
+                    # TODO: maybe we should add an 'other' category here as well?
                 ]
             else:
                 return [
@@ -128,25 +127,16 @@ class Report:
                 elif category == 'ct':
                     type = "credible threat of violence"
                 return [ # TODO: Insert description of what this abuse type is + our policy on it in text below
-                    f"You've selected that this message falls under: {type}. Our moderator's have been notified of this report. Please provide
-                        any additional details you'd like to include in your report."
+                    f"You've selected that this message falls under: {type}. Our moderator's have been notified of this report. Please provide any additional details you'd like to include in your report."
                 ]
             elif category == "k":
                 self.state = State.ADDITIONAL_MESSAGE
                 return [
-                    f"You've selected that this message falls under: kidnapping threat. Our moderator's have been notified of this report, and the
-                        message is being run through our AI-detection model. Please provide any additional details you'd like to include in your report."
-                ]
-            elif category == "imminent danger":
-                self.state = State.IMMINENT_DANGER_SELECTION
-                return [
-                    f"Thank you for your urgency. You've selected: {category}. Our moderator's have been notified of this report, and the message is being run through
-                        our AI-detection model. Please provide any additional details you'd like to include in your report."
+                    f"You've selected that this message falls under: kidnapping threat. Our moderator's have been notified of this report, and the message is being run through our AI-detection model. Please provide any additional details you'd like to include in your report."
                 ]
             else:
                 return [
-                    f"I'm sorry, I couldn't understand the category. Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of 
-                        violence, or 'k' for kidnapping."
+                    f"I'm sorry, I couldn't understand the category. Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of violence, or 'k' for kidnapping."
                 ]
             
         if self.state == State.ADDITIONAL_MESSAGE:
