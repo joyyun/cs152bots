@@ -42,7 +42,6 @@ class Report:
         self.additional_message = None
 
     async def handle_message(self, message):
-        # print(self.state)
         """
         This function makes up the meat of the user-side reporting flow. It defines how we transition between states and what
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
@@ -252,12 +251,6 @@ class Report:
                 return [
                     "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
                 ]
-
-        if self.state == State.MOD_COMPLETE:
-            return ["Thank you for your review."]
-
-        # if self.state == State.REPORT_COMPLETE:
-        #     self.report_complete()
 
         return []
 

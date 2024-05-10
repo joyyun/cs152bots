@@ -38,6 +38,7 @@ class ModBot(discord.Client):
         self.group_num = None
         self.mod_channels = {}  # Map from guild to the mod channel id for that guild
         self.reports = {}  # Map from user IDs to the state of their report
+        self.curr_report_author = None
 
     async def on_ready(self):
         print(f"{self.user.name} has connected to Discord! It is these guilds:")
@@ -110,6 +111,7 @@ class ModBot(discord.Client):
 
         # If the report is complete or cancelled, remove it from our map
         if self.reports[author_id].report_complete():
+            self.curr_report_author = author_id
             # Forward the report to the mod channel
             # mod_channel = self.mod_channels[message.guild.id]
             # TODO: THIS IS HARDCODED
@@ -126,18 +128,22 @@ class ModBot(discord.Client):
             for r in responses:
                 await mod_channel.send(r)
 
-            if self.reports[author_id].mod_complete():
-                await mod_channel.send(f"thank god")  # TODO: parse this to print nicely
-
-            self.reports.pop(author_id)
+            # self.reports.pop(author_id)
 
     async def handle_channel_message(self, message):
-        # if message.channel.name == f"group-{self.group_num}-mod":
-        #     mod_channel = self.mod_channels[message.guild.id]
-        #     await mod_channel.send(
-        #         f'Forwarded message:\n{message.author.name}: "{message.content}"'
-        #     )
-        #     return
+        # Moderator review flow
+        if message.channel.name == f"group-{self.group_num}-mod":
+            mod_channel = self.mod_channels[message.guild.id]
+            responses = await self.reports[self.curr_report_author].handle_message(
+                message
+            )
+            for r in responses:
+                await mod_channel.send(r)
+
+            if self.reports[self.curr_report_author].mod_complete():
+                await mod_channel.send("Thank you for your review.")
+                self.reports.pop(self.curr_report_author)
+            return
 
         # Only handle messages sent in the "group-#" channel
         if not message.channel.name == f"group-{self.group_num}":
