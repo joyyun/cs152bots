@@ -2,6 +2,7 @@ from enum import Enum, auto
 import discord
 import re
 
+
 class State(Enum):
     REPORT_START = auto()
     AWAITING_MESSAGE = auto()
@@ -24,7 +25,9 @@ class Report:
     START_KEYWORD = "report"
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
-    CATEGORIES = "'spam', 'inappropriate content', 'hate speech', 'imminent danger', or 'other'"
+    CATEGORIES = (
+        "'spam', 'inappropriate content', 'hate speech', 'imminent danger', or 'other'"
+    )
 
     def __init__(self, client):
         self.state = State.REPORT_START
@@ -33,11 +36,10 @@ class Report:
         self.message_author = None
         self.imminent_danger = False
         self.virtual_kidnapping = False
-        self.message_type = None # photo or text?
-        self.fake = None # do our models tell us this is fake?
+        self.message_type = None  # photo or text?
+        self.fake = None  # do our models tell us this is fake?
         self.block_user = False
         self.additional_message = None
-
 
     async def handle_message(self, message):
         # print(self.state)
@@ -120,7 +122,7 @@ class Report:
             }
             if category in ["spam", "inappropriate content", "hate speech"]:
                 self.state = State.ADDITIONAL_MESSAGE
-                return [ # TODO: Insert description of what this abuse type is + our policy on it in text below
+                return [  # TODO: Insert description of what this abuse type is + our policy on it in text below
                     f"You've selected that this message falls under: {category}. {category_dict[category]} Please provide any additional details you'd like to include in your report."
                 ]
             elif category == "other":
@@ -137,18 +139,20 @@ class Report:
                 ]
             else:
                 return [
-                    "I'm sorry, I couldn't understand the category. Please respond with " + self.CATEGORIES + "."
+                    "I'm sorry, I couldn't understand the category. Please respond with "
+                    + self.CATEGORIES
+                    + "."
                 ]
-            
+
         if self.state == State.IMMINENT_DANGER_SELECTION:
             category = message.content
-            if category in ['sh', 'ct']:
+            if category in ["sh", "ct"]:
                 self.state = State.ADDITIONAL_MESSAGE
-                if category == 'sh':
+                if category == "sh":
                     type = "self-harm or suicidal intent"
-                elif category == 'ct':
+                elif category == "ct":
                     type = "credible threat of violence"
-                return [ # TODO: Insert description of what this abuse type is + our policy on it in text below
+                return [  # TODO: Insert description of what this abuse type is + our policy on it in text below
                     f"You've selected that this message falls under: {type}. Our moderator's have been notified of this report. Please provide any additional details you'd like to include in your report."
                 ]
             elif category == "kt":
@@ -161,20 +165,22 @@ class Report:
                 return [
                     f"I'm sorry, I couldn't understand the category. Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of violence, or 'kt' for kidnapping."
                 ]
-            
+
         if self.state == State.ADDITIONAL_MESSAGE:
             self.additional_message = message.content
             self.state = State.AWAITING_ADDITIONAL_MESSAGE
             return [
                 "Are there other messages you would like to flag? Please respond with 'yes' or 'no'.",
             ]
-        
+
         if self.state == State.AWAITING_ADDITIONAL_MESSAGE:
             if message.content.lower() == "yes":
-                reply =  "The same process will be repeated for the next message.\n\n" 
+                reply = "The same process will be repeated for the next message.\n\n"
                 reply += "Thank you for starting the reporting process. "
                 reply += "Say `help` at any time for more information.\n\n"
-                reply += "Please copy paste the link to the message you want to report.\n"
+                reply += (
+                    "Please copy paste the link to the message you want to report.\n"
+                )
                 reply += "You can obtain this link by right-clicking the message and clicking `Copy Message Link`."
                 self.state = State.AWAITING_MESSAGE
                 return [reply]
@@ -187,12 +193,12 @@ class Report:
                 return [
                     "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
                 ]
-            
+
         if self.state == State.AWAITING_BLOCK:
             if message.content.lower() == "yes":
                 self.state = State.CONFIRM_SUBMIT
                 self.block_user = True
-                return [ 
+                return [
                     f"Message has been deleted. {self.message_author} is now blocked from sending you messages in the future. Do you want to submit this report? Please respond with 'yes' or 'no'."
                 ]
             elif message.content.lower() == "no":
@@ -204,7 +210,7 @@ class Report:
                 return [
                     "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
                 ]
-        
+
         if self.state == State.CONFIRM_SUBMIT:
             if message.content.lower() == "yes":
                 self.state = State.REPORT_COMPLETE
@@ -212,27 +218,25 @@ class Report:
                     return [
                         "Thank you for your report. It has been submitted. Due to the urgent nature of this case, it has been moved to the front of our priority queue."
                     ]
-                else: 
+                else:
                     return [
                         "Thank you for your report, our moderators will review the message shortly."
                     ]
             elif message.content.lower() == "no":
                 self.state = State.REPORT_COMPLETE
-                return [
-                    "Report cancelled."
-                ]
+                return ["Report cancelled."]
             else:
                 return [
                     "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
                 ]
-            
+
         # entering moderator flow below!
         if self.state == State.MODERATOR_REVIEW:
             self.state = State.AWAITING_ABUSE_VERIFICATION
             return [
                 f"Please review the contents of ths report and decide if this is a safety violation. Respond with 'yes' or 'no'. \n Attached is the flagged message: {self.__dict__}"
             ]
-        
+
         if self.state == State.AWAITING_ABUSE_VERIFICATION:
             if message.content.lower() == "yes":
                 self.state = State.MOD_COMPLETE
@@ -248,7 +252,7 @@ class Report:
                 return [
                     "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
                 ]
-            
+
         # if self.state == State.REPORT_COMPLETE:
         #     self.report_complete()
 
@@ -256,8 +260,6 @@ class Report:
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
-    
+
     def mod_complete(self):
         return self.state == State.MOD_COMPLETE
-    
-

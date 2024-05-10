@@ -8,6 +8,7 @@ import re
 import requests
 from report import Report, State
 import pdb
+
 # from moderator import *
 
 # Set up logging to the console
@@ -83,7 +84,7 @@ class ModBot(discord.Client):
             return
 
         # TODO: hard-coding in paths to send report in group mod chat from DM
-        # guild_id = 1211760623969370122 
+        # guild_id = 1211760623969370122
         # mod_channel = self.mod_channels[guild_id]
         # await mod_channel.send(
         #     f'Forwarded message:\n{message.author.name}: "{message.content}"'
@@ -112,19 +113,31 @@ class ModBot(discord.Client):
             # Forward the report to the mod channel
             # mod_channel = self.mod_channels[message.guild.id]
             # TODO: THIS IS HARDCODED
-            guild_id = 1211760623969370122 
+            guild_id = 1211760623969370122
             mod_channel = self.mod_channels[guild_id]
-            await mod_channel.send( # TODO: parse this to print nicely
+            await mod_channel.send(  # TODO: parse this to print nicely
                 f'Report Submitted:\n{author_id}: "{self.reports[author_id].__dict__}"'
             )
-            await self.moderator_review(self.reports[author_id])
+
+            # Handle moderator review
+            self.reports[author_id].state = State.MODERATOR_REVIEW
+            responses = await self.reports[author_id].handle_message(message)
+            for r in responses:
+                await mod_channel.send(r)
+
             if self.reports[author_id].mod_complete():
-                await mod_channel.send( # TODO: parse this to print nicely
-                f'thank god'
-            )
+                await mod_channel.send(f"thank god")  # TODO: parse this to print nicely
+
             self.reports.pop(author_id)
 
     async def handle_channel_message(self, message):
+        # if message.channel.name == f"group-{self.group_num}-mod":
+        #     mod_channel = self.mod_channels[message.guild.id]
+        #     await mod_channel.send(
+        #         f'Forwarded message:\n{message.author.name}: "{message.content}"'
+        #     )
+        #     return
+
         # Only handle messages sent in the "group-#" channel
         if not message.channel.name == f"group-{self.group_num}":
             return
@@ -151,14 +164,6 @@ class ModBot(discord.Client):
         shown in the mod channel.
         """
         return "Evaluated: '" + text + "'"
-    
-    async def moderator_review(self, report):
-        report.state = State.MODERATOR_REVIEW
-        responses = await report.handle_message(report.message)
-        for r in responses:
-            await report.message.mod_channel.send(r)
-
-        return
 
 
 client = ModBot()
