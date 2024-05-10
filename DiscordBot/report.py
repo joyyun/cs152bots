@@ -110,21 +110,28 @@ class Report:
 
         if self.state == State.AWAITING_CATEGORY:
             category = message.content
+            category_dict = {
+                "spam": "Spam includes unsolicited, low-quality communications. ",
+                "inappropriate content": "Inappropriate content contains sexually explicit, violent, or otherwise inappropriate content.",
+                "hate speech": "Hate Speech: Hate speech contains discriminatory or derogatory language or images.",
+                "imminent danger": "Imminent Danger contains threats of self-harm, violence, or kidnapping.",
+                "other": "Other: Reported content doesn't fit into the above categories.",
+            }
             if category in ["spam", "inappropriate content", "hate speech"]:
                 self.state = State.ADDITIONAL_MESSAGE
                 return [ # TODO: Insert description of what this abuse type is + our policy on it in text below
-                    f"You've selected that this message falls under: {category}. Please provide any additional details you'd like to include in your report."
+                    f"You've selected that this message falls under: {category}. {category_dict[category]} Please provide any additional details you'd like to include in your report."
                 ]
             elif category == "other":
                 self.state = State.ADDITIONAL_MESSAGE
                 return [
-                    f"You've selected: {category}. Please explain why you reported this message and provide any additional details you'd like to include in your report."
+                    f"You've selected: {category}. {category_dict[category]} Please explain why you reported this message and provide any additional details you'd like to include in your report."
                 ]
             elif category == "imminent danger":
                 self.state = State.IMMINENT_DANGER_SELECTION
                 self.imminent_danger = True
                 return [
-                    f"Thank you for your urgency. You've selected: {category}. To further inform the action we should take, please select which category this falls under. Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of violence, or 'kt' for kidnapping threat."
+                    f"Thank you for your urgency. You've selected: {category}. {category_dict[category]} To further inform the action we should take, please select which category this falls under. Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of violence, or 'kt' for kidnapping threat."
                     # TODO: maybe we should add an 'other' category here as well?
                 ]
             else:
@@ -185,12 +192,12 @@ class Report:
                 self.state = State.CONFIRM_SUBMIT
                 self.block_user = True
                 return [ 
-                    f"{self.message_author} is now blocked from sending you messages in the future. Do you want to submit this report? Please respond with 'yes' or 'no'."
+                    f"Message has been deleted. {self.message_author} is now blocked from sending you messages in the future. Do you want to submit this report? Please respond with 'yes' or 'no'."
                 ]
             elif message.content.lower() == "no":
                 self.state = State.CONFIRM_SUBMIT
                 return [
-                    "This user will continue to be allowed to send you messages in the future. Do you want to submit this report? Please respond with 'yes' or 'no'."
+                    "Message has been deleted. This user will continue to be allowed to send you messages in the future. Do you want to submit this report? Please respond with 'yes' or 'no'."
                 ]
             else:
                 return [
