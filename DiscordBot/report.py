@@ -253,6 +253,9 @@ class Report:
                     "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
                 ]
 
+        if self.state == State.MOD_COMPLETE:
+            return ["Thank you for your review."]
+
         # if self.state == State.REPORT_COMPLETE:
         #     self.report_complete()
 

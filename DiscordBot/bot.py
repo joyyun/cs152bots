@@ -119,6 +119,7 @@ class ModBot(discord.Client):
                 f'Report Submitted:\n{author_id}: "{self.reports[author_id].__dict__}"'
             )
 
+            # TODO: add check for report complete, we don't want to do mod flow if report is canceled
             # Handle moderator review
             self.reports[author_id].state = State.MODERATOR_REVIEW
             responses = await self.reports[author_id].handle_message(message)
