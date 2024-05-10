@@ -81,6 +81,13 @@ class ModBot(discord.Client):
             await message.channel.send(reply)
             return
 
+        # TODO: hard-coding in paths to send report in group mod chat from DM
+        # guild_id = 1211760623969370122 
+        # mod_channel = self.mod_channels[guild_id]
+        # await mod_channel.send(
+        #     f'Forwarded message:\n{message.author.name}: "{message.content}"'
+        # )
+
         author_id = message.author.id
         responses = []
 
