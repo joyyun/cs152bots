@@ -118,7 +118,7 @@ class ModBot(discord.Client):
             guild_id = 1211760623969370122
             mod_channel = self.mod_channels[guild_id]
             await mod_channel.send(  # TODO: parse this to print nicely
-                f'Report Submitted:\n{author_id}: "{self.reports[author_id].__dict__}"'
+                f'Report Submitted.'
             )
 
             # TODO: add check for report complete, we don't want to do mod flow if report is canceled
@@ -137,11 +137,19 @@ class ModBot(discord.Client):
             responses = await self.reports[self.curr_report_author].handle_message(
                 message
             )
+            print("Message: ", message)
+            print("Responses: ", responses)
             for r in responses:
                 await mod_channel.send(r)
 
             if self.reports[self.curr_report_author].mod_complete():
                 await mod_channel.send("Thank you for your review.")
+                if self.reports[self.curr_report_author].virtual_kidnapping:
+                    if self.reports[self.curr_report_author].fake:
+                        await self.reports[self.curr_report_author].author_channel.send("We have detected the user’s messages to be malicious and have quarantined them. Our model has flagged the contents of their messages as potentially real. Please exercise caution and contact your local law enforcement.")
+                    else:
+                        await self.reports[self.curr_report_author].author_channel.send("We have detected the user’s messages to be malicious and have quarantined them. Our model has flagged the contents of their messages as AI-generated. Although the threat is likely false, please exercise caution and contact your local law enforcement.")
+
                 self.reports.pop(self.curr_report_author)
             return
 

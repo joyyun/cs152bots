@@ -18,7 +18,10 @@ class State(Enum):
     MODERATOR_REVIEW = auto()
     AWAITING_ABUSE_VERIFICATION = auto()
     MOD_COMPLETE = auto()
-    # FINAL = auto()
+    ABUSE_CONFIRMED = auto()
+    ABUSE_DENIED = auto()
+    IMMINENT_DANGER_HANDLING = auto()
+    AWAITING_MODEL_RESULTS = auto()
 
 
 class Report:
@@ -40,6 +43,7 @@ class Report:
         self.fake = None  # do our models tell us this is fake?
         self.block_user = False
         self.additional_message = None
+        self.author_channel = None
 
     async def handle_message(self, message):
         """
@@ -47,12 +51,13 @@ class Report:
         prompts to offer at each of those states. You're welcome to change anything you want; this skeleton is just here to
         get you started and give you a model for working with Discord.
         """
-
+        print("in handle_message(): ", self.state, message)
         if message.content == self.CANCEL_KEYWORD:
             self.state = State.REPORT_COMPLETE
             return ["Report cancelled."]
 
         if self.state == State.REPORT_START:
+            self.author_channel = message.channel
             reply = "Thank you for starting the reporting process. "
             reply += "Say `help` at any time for more information.\n\n"
             reply += "Please copy paste the link to the message you want to report.\n"
@@ -232,20 +237,63 @@ class Report:
         # entering moderator flow below!
         if self.state == State.MODERATOR_REVIEW:
             self.state = State.AWAITING_ABUSE_VERIFICATION
-            return [
-                f"Please review the contents of ths report and decide if this is a safety violation. Respond with 'yes' or 'no'. \n Attached is the flagged message: {self.__dict__}"
-            ]
+            # return [
+            #     f"Please review the contents of ths report and decide if this is a safety violation. Respond with 'yes' or 'no'. Attached is the flagged message: \n {self.__dict__}"
+            # ]
+            reply = "Please review the contents of ths report and decide if this is a safety violation. Respond with 'yes' or 'no'. Attached is the flagged message:\n"
+            reply += f"Flagged message: {self.message}\n"
+            reply += f"Imminent danger: {self.imminent_danger}\n"
+            reply += f"Virtual kidnapping: {self.virtual_kidnapping}\n"
+            reply += f"Additional message: {self.additional_message}\n"
+            return [reply]
 
         if self.state == State.AWAITING_ABUSE_VERIFICATION:
             if message.content.lower() == "yes":
-                self.state = State.MOD_COMPLETE
+                if not self.imminent_danger:
+                    self.state = State.MOD_COMPLETE
+                    return [
+                        "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol. \nThe reporter has confirmed that this report is not an imminent danger. Please investigate if the reported user has violated our guidelines before. If they are a repeat offender, ban the user from the platform. If this is their first offense, issue a warning."
+                    ]
+                else:
+                    if not self.virtual_kidnapping:
+                        self.state = State.MOD_COMPLETE
+                        return [
+                            "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol. \nThe reporter has confirmed that this report is an imminent danger. Please report immediately to your manager and the authorities."
+                        ]
+                    else:
+                        self.state = State.AWAITING_MODEL_RESULTS
+                        return [
+                            "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol. \nThe reporter has confirmed that this report is a kidnapping threat. The next is to investigate if this report could be a case virtual kidnapping. Please run the message through our AI-detection models before completing the rest of this report review. \nAfter running through our models, is the message content AI-generated? Please respond with 'yes' or 'no'."
+                        ]
+
+            elif message.content.lower() == "no":
+                self.state = State.ABUSE_DENIED
                 return [
-                    "This report is not an abuse violation. No further action is needed."
+                    "This report is not an abuse violation."
+                ]
+            else:
+                return [
+                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                ]
+        
+        if self.state == State.ABUSE_DENIED:
+            self.state = State.MOD_COMPLETE
+            return [
+                "The rest of this report handling is left to moderator discretion. Please investigate the intent of the reporter and decide is further action is needed. Malicious reporting may result in user suspension."
+            ]
+                
+        if self.state == State.AWAITING_MODEL_RESULTS:
+            if message.content.lower() == "yes":
+                self.state = State.MOD_COMPLETE
+                self.fake = True
+                return [
+                    "This report is likely an attempt at a virtual kidnapping and a message has been sent to the user. Please report immediately to your manager and the authorities."
                 ]
             elif message.content.lower() == "no":
                 self.state = State.MOD_COMPLETE
-                return [
-                    "This report is not an abuse violation. No further action is needed."
+                self.fake = False
+                return [ # TODO: send a message to the user ^^
+                    "The reported message is malicious and dangerous and a message has been sent to the user. Please report immediately to your manager and the authorities."
                 ]
             else:
                 return [
@@ -253,6 +301,7 @@ class Report:
                 ]
 
         return []
+
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
