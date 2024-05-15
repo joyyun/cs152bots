@@ -38,7 +38,7 @@ class ModBot(discord.Client):
         self.group_num = None
         self.mod_channels = {}  # Map from guild to the mod channel id for that guild
         self.reports = {}  # Map from user IDs to the state of their report
-        self.curr_report_author = None
+        self.curr_report_author = None  # Stores the author of the current report
 
     async def on_ready(self):
         print(f"{self.user.name} has connected to Discord! It is these guilds:")
@@ -118,7 +118,7 @@ class ModBot(discord.Client):
             guild_id = 1211760623969370122
             mod_channel = self.mod_channels[guild_id]
             await mod_channel.send(  # TODO: parse this to print nicely
-                f'Report Submitted.'
+                f"Report Submitted."
             )
 
             # TODO: add check for report complete, we don't want to do mod flow if report is canceled
@@ -146,9 +146,13 @@ class ModBot(discord.Client):
                 await mod_channel.send("Thank you for your review.")
                 if self.reports[self.curr_report_author].virtual_kidnapping:
                     if self.reports[self.curr_report_author].fake:
-                        await self.reports[self.curr_report_author].author_channel.send("We have detected the user’s messages to be malicious and have quarantined them. Our model has flagged the contents of their messages as potentially real. Please exercise caution and contact your local law enforcement.")
+                        await self.reports[self.curr_report_author].author_channel.send(
+                            "We have detected the user's messages to be malicious and have quarantined them. Our model has flagged the contents of their messages as potentially real. Please exercise caution and contact your local law enforcement."
+                        )
                     else:
-                        await self.reports[self.curr_report_author].author_channel.send("We have detected the user’s messages to be malicious and have quarantined them. Our model has flagged the contents of their messages as AI-generated. Although the threat is likely false, please exercise caution and contact your local law enforcement.")
+                        await self.reports[self.curr_report_author].author_channel.send(
+                            "We have detected the user's messages to be malicious and have quarantined them. Our model has flagged the contents of their messages as AI-generated. Although the threat is likely false, please exercise caution and contact your local law enforcement."
+                        )
 
                 self.reports.pop(self.curr_report_author)
             return

@@ -28,8 +28,15 @@ class Report:
     START_KEYWORD = "report"
     CANCEL_KEYWORD = "cancel"
     HELP_KEYWORD = "help"
+    # CATEGORIES = (
+    #     "`spam`, `inappropriate content`, `hate speech`, `imminent danger`, or `other`"
+    # )
     CATEGORIES = (
-        "'spam', 'inappropriate content', 'hate speech', 'imminent danger', or 'other'"
+        "- `spam`\n"
+        "- `inappropriate content`\n"
+        "- `hate speech`\n"
+        "- `imminent danger`\n"
+        "- `other`"
     )
 
     def __init__(self, client):
@@ -96,29 +103,34 @@ class Report:
             return [
                 "I found this message:",
                 "```" + message.author.name + ": " + message.content + "```",
-                "Is this the message you'd like to report? Please respond with 'yes' or 'no'.",
+                "Is this the message you'd like to report? Please respond with `yes` or `no`.",
             ]
 
         if self.state == State.MESSAGE_IDENTIFIED:
             if message.content.lower() == "yes":
                 self.state = State.AWAITING_CATEGORY
+                # return [
+                #     "What category would you like to report this message under? Please respond with "
+                #     + self.CATEGORIES
+                #     + "."
+                # ]
                 return [
-                    "What category would you like to report this message under? Please respond with "
+                    "What category would you like to report this message under?\n"
+                    + "Please respond with one of the following:\n"
                     + self.CATEGORIES
-                    + "."
                 ]
             elif message.content.lower() == "no":
                 self.state = State.AWAITING_MESSAGE
                 return ["Please copy paste the link to the message you want to report."]
             else:
                 return [
-                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                    "I'm sorry, I didn't understand that. Please respond with `yes` or `no`."
                 ]
 
         if self.state == State.AWAITING_CATEGORY:
             category = message.content
             category_dict = {
-                "spam": "Spam includes unsolicited, low-quality communications. ",
+                "spam": "Spam includes unsolicited, low-quality communications.",
                 "inappropriate content": "Inappropriate content contains sexually explicit, violent, or otherwise inappropriate content.",
                 "hate speech": "Hate Speech: Hate speech contains discriminatory or derogatory language or images.",
                 "imminent danger": "Imminent Danger contains threats of self-harm, violence, or kidnapping.",
@@ -127,54 +139,71 @@ class Report:
             if category in ["spam", "inappropriate content", "hate speech"]:
                 self.state = State.ADDITIONAL_MESSAGE
                 return [  # TODO: Insert description of what this abuse type is + our policy on it in text below
-                    f"You've selected that this message falls under: {category}. {category_dict[category]} Please provide any additional details you'd like to include in your report."
+                    f"You've selected: `{category}`\n"
+                    + f"{category_dict[category]}\n"
+                    + "Please provide any additional details you'd like to include in your report."
                 ]
             elif category == "other":
                 self.state = State.ADDITIONAL_MESSAGE
                 return [
-                    f"You've selected: {category}. {category_dict[category]} Please explain why you reported this message and provide any additional details you'd like to include in your report."
+                    f"You've selected: `{category}`\n"
+                    + f"{category_dict[category]}\n"
+                    + "Please explain why you reported this message and provide any additional details you'd like to include in your report."
                 ]
             elif category == "imminent danger":
                 self.state = State.IMMINENT_DANGER_SELECTION
                 self.imminent_danger = True
                 return [
-                    f"Thank you for your urgency. You've selected: {category}. {category_dict[category]} To further inform the action we should take, please select which category this falls under. Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of violence, or 'kt' for kidnapping threat."
+                    # "Thank you for your urgency.\n" +
+                    f"You've selected: `{category}`\n"
+                    + f"{category_dict[category]}\n"
+                    + "To further inform the action we should take, please select what kind of imminent danger this message falls under.\n"
+                    + "Respond with one of the following:\n"
+                    + "- `sh` for self-harm or suicidal intent\n"
+                    + "- `ct` for credible threat of violence\n"
+                    + "- `kt` for kidnapping threat"
                     # TODO: maybe we should add an 'other' category here as well?
                 ]
             else:
                 return [
-                    "I'm sorry, I couldn't understand the category. Please respond with "
+                    "I'm sorry, I couldn't understand the category.\n"
+                    + "Please respond with one of the following:\n"
                     + self.CATEGORIES
-                    + "."
                 ]
 
         if self.state == State.IMMINENT_DANGER_SELECTION:
             category = message.content
-            if category in ["sh", "ct"]:
-                self.state = State.ADDITIONAL_MESSAGE
-                if category == "sh":
-                    type = "self-harm or suicidal intent"
-                elif category == "ct":
-                    type = "credible threat of violence"
-                return [  # TODO: Insert description of what this abuse type is + our policy on it in text below
-                    f"You've selected that this message falls under: {type}. Our moderator's have been notified of this report. Please provide any additional details you'd like to include in your report."
+            if category not in ["sh", "ct", "kt"]:
+                return [
+                    "I'm sorry, I couldn't understand the kind of imminent danger specified."
+                    + "Please respond with one of the following:\n"
+                    + "- `sh` for self-harm or suicidal intent\n"
+                    + "- `ct` for credible threat of violence\n"
+                    + "- `kt` for kidnapping threat"
                 ]
-            elif category == "kt":
-                self.state = State.ADDITIONAL_MESSAGE
+            self.state = State.ADDITIONAL_MESSAGE
+            if category == "kt":
                 self.virtual_kidnapping = True
                 return [
-                    f"You've selected that this message falls under: kidnapping threat. Our moderator's have been notified of this report, and the message is being run through our AI-detection model. Please provide any additional details you'd like to include in your report."
+                    "You've selected that this message falls under: `kidnapping threat`\n"
+                    + "Our moderator's have been notified of this report, and the message is being run through our AI-detection model. Please provide any additional details you'd like to include in your report."
                 ]
             else:
-                return [
-                    f"I'm sorry, I couldn't understand the category. Respond with 'sh' for self-harm or suicidal intent, 'ct' for credible threat of violence, or 'kt' for kidnapping."
+                type = (
+                    "self-harm or suicidal intent"
+                    if category == "sh"
+                    else "credible threat of violence"
+                )
+                return [  # TODO: Insert description of what this abuse type is + our policy on it in text below
+                    f"You've selected that this message falls under: `{type}`\n"
+                    + "Our moderator's have been notified of this report. Please provide any additional details you'd like to include in your report."
                 ]
 
         if self.state == State.ADDITIONAL_MESSAGE:
             self.additional_message = message.content
             self.state = State.AWAITING_ADDITIONAL_MESSAGE
             return [
-                "Are there other messages you would like to flag? Please respond with 'yes' or 'no'.",
+                "Are there other messages you would like to flag? Please respond with `yes` or `no`.",
             ]
 
         if self.state == State.AWAITING_ADDITIONAL_MESSAGE:
@@ -191,11 +220,11 @@ class Report:
             elif message.content.lower() == "no":
                 self.state = State.AWAITING_BLOCK
                 return [
-                    "Would you like to block this user from sending you more messages in the future? Please respond with 'yes' or 'no'."
+                    "Would you like to block this user from sending you more messages in the future? Please respond with `yes` or `no`."
                 ]
             else:
                 return [
-                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                    "I'm sorry, I didn't understand that. Please respond with `yes` or `no`."
                 ]
 
         if self.state == State.AWAITING_BLOCK:
@@ -203,16 +232,16 @@ class Report:
                 self.state = State.CONFIRM_SUBMIT
                 self.block_user = True
                 return [
-                    f"Message has been deleted. {self.message_author} is now blocked from sending you messages in the future. Do you want to submit this report? Please respond with 'yes' or 'no'."
+                    f"Message has been deleted. {self.message_author} is now blocked from sending you messages in the future. Do you want to submit this report? Please respond with `yes` or `no`."
                 ]
             elif message.content.lower() == "no":
                 self.state = State.CONFIRM_SUBMIT
                 return [
-                    "Message has been deleted. This user will continue to be allowed to send you messages in the future. Do you want to submit this report? Please respond with 'yes' or 'no'."
+                    "Message has been deleted. This user will continue to be allowed to send you messages in the future. Do you want to submit this report? Please respond with `yes` or `no`."
                 ]
             else:
                 return [
-                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                    "I'm sorry, I didn't understand that. Please respond with `yes` or `no`."
                 ]
 
         if self.state == State.CONFIRM_SUBMIT:
@@ -231,16 +260,13 @@ class Report:
                 return ["Report cancelled."]
             else:
                 return [
-                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                    "I'm sorry, I didn't understand that. Please respond with `yes` or `no`."
                 ]
 
         # entering moderator flow below!
         if self.state == State.MODERATOR_REVIEW:
             self.state = State.AWAITING_ABUSE_VERIFICATION
-            # return [
-            #     f"Please review the contents of ths report and decide if this is a safety violation. Respond with 'yes' or 'no'. Attached is the flagged message: \n {self.__dict__}"
-            # ]
-            reply = "Please review the contents of ths report and decide if this is a safety violation. Respond with 'yes' or 'no'. Attached is the flagged message:\n"
+            reply = "Please review the contents of ths report and decide if this is a safety violation. Respond with `yes` or `no`. Attached is the flagged message:\n"
             reply += f"Flagged message: {self.message}\n"
             reply += f"Imminent danger: {self.imminent_danger}\n"
             reply += f"Virtual kidnapping: {self.virtual_kidnapping}\n"
@@ -252,36 +278,37 @@ class Report:
                 if not self.imminent_danger:
                     self.state = State.MOD_COMPLETE
                     return [
-                        "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol. \nThe reporter has confirmed that this report is not an imminent danger. Please investigate if the reported user has violated our guidelines before. If they are a repeat offender, ban the user from the platform. If this is their first offense, issue a warning."
+                        "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol.\n"
+                        + "The reporter has confirmed that this report is not an imminent danger. Please investigate if the reported user has violated our guidelines before. If they are a repeat offender, ban the user from the platform. If this is their first offense, issue a warning."
                     ]
                 else:
                     if not self.virtual_kidnapping:
                         self.state = State.MOD_COMPLETE
                         return [
-                            "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol. \nThe reporter has confirmed that this report is an imminent danger. Please report immediately to your manager and the authorities."
+                            "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol.\n"
+                            + "The reporter has confirmed that this report is an imminent danger. Please report immediately to your manager and the authorities."
                         ]
                     else:
                         self.state = State.AWAITING_MODEL_RESULTS
                         return [
-                            "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol. \nThe reporter has confirmed that this report is a kidnapping threat. The next is to investigate if this report could be a case virtual kidnapping. Please run the message through our AI-detection models before completing the rest of this report review. \nAfter running through our models, is the message content AI-generated? Please respond with 'yes' or 'no'."
+                            "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol.\n"
+                            + "The reporter has confirmed that this report is a kidnapping threat. The next is to investigate if this report could be a case virtual kidnapping. Please run the message through our AI-detection models before completing the rest of this report review. \nAfter running through our models, is the message content AI-generated? Please respond with 'yes' or 'no'."
                         ]
 
             elif message.content.lower() == "no":
                 self.state = State.ABUSE_DENIED
-                return [
-                    "This report is not an abuse violation."
-                ]
+                return ["This report is not an abuse violation."]
             else:
                 return [
-                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                    "I'm sorry, I didn't understand that. Please respond with `yes` or `no`."
                 ]
-        
+
         if self.state == State.ABUSE_DENIED:
             self.state = State.MOD_COMPLETE
             return [
                 "The rest of this report handling is left to moderator discretion. Please investigate the intent of the reporter and decide is further action is needed. Malicious reporting may result in user suspension."
             ]
-                
+
         if self.state == State.AWAITING_MODEL_RESULTS:
             if message.content.lower() == "yes":
                 self.state = State.MOD_COMPLETE
@@ -292,16 +319,15 @@ class Report:
             elif message.content.lower() == "no":
                 self.state = State.MOD_COMPLETE
                 self.fake = False
-                return [ # TODO: send a message to the user ^^
+                return [  # TODO: send a message to the user ^^
                     "The reported message is malicious and dangerous and a message has been sent to the user. Please report immediately to your manager and the authorities."
                 ]
             else:
                 return [
-                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
+                    "I'm sorry, I didn't understand that. Please respond with `yes` or `no`."
                 ]
 
         return []
-
 
     def report_complete(self):
         return self.state == State.REPORT_COMPLETE
