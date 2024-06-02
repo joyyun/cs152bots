@@ -8,6 +8,7 @@ import re
 import requests
 from report import Report, State
 import pdb
+from perspective_api import *
 
 # from moderator import *
 
@@ -76,6 +77,16 @@ class ModBot(discord.Client):
             await self.handle_channel_message(message)
         else:
             await self.handle_dm(message)
+
+        mod_channel = self.mod_channels[self.guild_id]
+        scores = self.score_format(self.eval_text(message.content))
+
+        eval = None
+        if scores['scores']['threat'] > 0.6 or scores['scores']['toxicity'] > 0.6 or scores['scores']['sexually_explicit'] > 0.6:
+            eval = "Alert! This message has been auto-flagged by our system. Please review the contents of this report and decide if this is a safety violation. Respond with 'yes' or 'no'." 
+            eval += f"\n\nMessage:: {message.content}"
+            eval += f"\n\nScores: {scores}"
+            await mod_channel.send(eval)
 
     async def handle_dm(self, message):
         # Handle a help message
@@ -166,6 +177,25 @@ class ModBot(discord.Client):
         insert your code here! This will primarily be used in Milestone 3.
         """
         return message
+    
+    def eval_text(self, message):
+        """'
+        Use Google Perspective API to scan for toxicity and sexually explicit content.
+        """
+        message_score = analyze_message(message)
+        return message_score
+    
+    def score_format(self, scores):
+        """
+        Formats the scores json returned by Google Perspective API.
+        """
+        results = {}
+        results['scores'] = {}
+        results['scores']['toxicity'] = scores['attributeScores']['TOXICITY']['summaryScore']['value']
+        results['scores']['sexually_explicit'] = scores['attributeScores']['SEXUALLY_EXPLICIT']['summaryScore']['value']
+        results['scores']['threat'] = scores['attributeScores']['THREAT']['summaryScore']['value']
+
+        return results
 
     def code_format(self, text):
         """'
