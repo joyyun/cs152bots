@@ -22,6 +22,8 @@ class State(Enum):
     ABUSE_DENIED = auto()
     IMMINENT_DANGER_HANDLING = auto()
     AWAITING_MODEL_RESULTS = auto()
+    AUTO_FLAGGED = auto()
+    AWAITING_AUTO_FLAGGED_REVIEW = auto()
 
 
 class Report:
@@ -325,6 +327,26 @@ class Report:
             else:
                 return [
                     "I'm sorry, I didn't understand that. Please respond with `yes` or `no`."
+                ]
+            
+        if self.state == State.AUTO_FLAGGED:
+            self.state = State.AWAITING_AUTO_FLAGGED_REVIEW
+            return ["Please review the contents of this report and decide if this is a safety violation. Respond with 'yes' or 'no'."]
+        
+        if self.state == State.AWAITING_AUTO_FLAGGED_REVIEW:
+            if message.content.lower() == "yes":
+                self.state = State.MOD_COMPLETE
+                return [
+                    "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol. \nPlease investigate if the reported user has violated our guidelines before. If they are a repeat offender, ban the user from the platform. If this is their first offense, issue a warning."
+                ]
+            elif message.content.lower() == "no":
+                self.state = State.ABUSE_DENIED
+                return [
+                    "This auto-flagged report is not an abuse violation."
+                ]
+            else:
+                return [
+                    "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
                 ]
 
         return []

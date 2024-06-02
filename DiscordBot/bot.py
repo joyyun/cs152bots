@@ -26,7 +26,6 @@ token_path = "tokens.json"
 if not os.path.isfile(token_path):
     raise Exception(f"{token_path} not found!")
 with open(token_path) as f:
-    # If you get an error here, it means your token is formatted incorrectly. Did you put it in quotes?
     tokens = json.load(f)
     discord_token = tokens["discord"]
 
@@ -83,12 +82,13 @@ class ModBot(discord.Client):
 
         eval = None
         if scores['scores']['threat'] > 0.6 or scores['scores']['toxicity'] > 0.6 or scores['scores']['sexually_explicit'] > 0.6:
-            eval = "Alert! This message has been auto-flagged by our system. Please review the contents of this report and decide if this is a safety violation. Respond with 'yes' or 'no'." 
+            eval = "Alert! This message has been auto-flagged by our system." 
             eval += f"\n\nMessage:: {message.content}"
             eval += f"\n\nScores: {scores}"
             await mod_channel.send(eval)
+            await self.handle_dm(message, auto_flagged=True)
 
-    async def handle_dm(self, message):
+    async def handle_dm(self, message, auto_flagged=False):
         # Handle a help message
         if message.content == Report.HELP_KEYWORD:
             reply = "Use the `report` command to begin the reporting process.\n"
@@ -97,35 +97,43 @@ class ModBot(discord.Client):
             return
 
         author_id = message.author.id
+        mod_channel = self.mod_channels[self.guild_id]
         responses = []
 
-        # Only respond to messages if they're part of a reporting flow
-        if author_id not in self.reports and not message.content.startswith(
-            Report.START_KEYWORD
-        ):
-            return
+        if not auto_flagged:
+            # Only respond to messages if they're part of a reporting flow
+            if author_id not in self.reports and not message.content.startswith(
+                Report.START_KEYWORD
+            ):
+                return
 
-        # If we don't currently have an active report for this user, add one
-        if author_id not in self.reports:
-            self.reports[author_id] = Report(self)
+            # If we don't currently have an active report for this user, add one
+            if author_id not in self.reports:
+                self.reports[author_id] = Report(self)
 
-        # Let the report class handle this message; forward all the messages it returns to uss
-        responses = await self.reports[author_id].handle_message(message)
-        for r in responses:
-            await message.channel.send(r)
+            # Let the report class handle this message; forward all the messages it returns to uss
+            responses = await self.reports[author_id].handle_message(message)
+            for r in responses:
+                await message.channel.send(r)
 
-        # If the report is complete or cancelled, remove it from our map
-        if self.reports[author_id].report_complete():
+            # If the report is complete or cancelled, remove it from our map
+            if self.reports[author_id].report_complete():
+                self.curr_report_author = author_id
+                # Forward the report to the mod channel
+                await mod_channel.send(  
+                    f"Report Submitted."
+                )
+
+                # Handle moderator review
+                self.reports[author_id].state = State.MODERATOR_REVIEW
+                responses = await self.reports[author_id].handle_message(message)
+                for r in responses:
+                    await mod_channel.send(r)
+        else:
+            if author_id not in self.reports:
+                self.reports[author_id] = Report(self)
             self.curr_report_author = author_id
-            # Forward the report to the mod channel
-            mod_channel = self.mod_channels[self.guild_id]
-            await mod_channel.send(  # TODO: parse this to print nicely
-                f"Report Submitted."
-            )
-
-            # TODO: add check for report complete, we don't want to do mod flow if report is canceled
-            # Handle moderator review
-            self.reports[author_id].state = State.MODERATOR_REVIEW
+            self.reports[author_id].state = State.AUTO_FLAGGED
             responses = await self.reports[author_id].handle_message(message)
             for r in responses:
                 await mod_channel.send(r)
