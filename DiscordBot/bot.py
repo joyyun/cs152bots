@@ -31,11 +31,12 @@ with open(token_path) as f:
 
 
 class ModBot(discord.Client):
-    def __init__(self):
+    def __init__(self, group_num=None, guild_id=None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(command_prefix=".", intents=intents)
-        self.group_num = None
+        self.group_num = group_num
+        self.guild_id = guild_id
         self.mod_channels = {}  # Map from guild to the mod channel id for that guild
         self.reports = {}  # Map from user IDs to the state of their report
         self.curr_report_author = None  # Stores the author of the current report
@@ -84,13 +85,6 @@ class ModBot(discord.Client):
             await message.channel.send(reply)
             return
 
-        # TODO: hard-coding in paths to send report in group mod chat from DM
-        # guild_id = 1211760623969370122
-        # mod_channel = self.mod_channels[guild_id]
-        # await mod_channel.send(
-        #     f'Forwarded message:\n{message.author.name}: "{message.content}"'
-        # )
-
         author_id = message.author.id
         responses = []
 
@@ -113,10 +107,7 @@ class ModBot(discord.Client):
         if self.reports[author_id].report_complete():
             self.curr_report_author = author_id
             # Forward the report to the mod channel
-            # mod_channel = self.mod_channels[message.guild.id]
-            # TODO: THIS IS HARDCODED
-            guild_id = 1211760623969370122
-            mod_channel = self.mod_channels[guild_id]
+            mod_channel = self.mod_channels[self.guild_id]
             await mod_channel.send(  # TODO: parse this to print nicely
                 f"Report Submitted."
             )
@@ -185,5 +176,8 @@ class ModBot(discord.Client):
         return "Evaluated: '" + text + "'"
 
 
-client = ModBot()
+client = ModBot(
+    group_num = 27, 
+    guild_id = 1211760623969370122 
+)
 client.run(discord_token)
