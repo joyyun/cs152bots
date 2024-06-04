@@ -1,7 +1,7 @@
 from googleapiclient import discovery
 import json
 
-API_KEY = 'AIzaSyDxq8jFiQ8gfVlML0If4fNo58b2GSO3eyA'
+API_KEY = ''
 
 def analyze_message(message):
   client = discovery.build(
