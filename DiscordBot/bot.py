@@ -78,7 +78,7 @@ class ModBot(discord.Client):
             await self.handle_dm(message)
 
         mod_channel = self.mod_channels[self.guild_id]
-        scores = self.score_format(self.eval_text(message.content))
+        scores = score_format(eval_text(message.content))
 
         eval = None
         if scores['scores']['threat'] > 0.6 or scores['scores']['toxicity'] > 0.6 or scores['scores']['sexually_explicit'] > 0.6:
@@ -155,7 +155,7 @@ class ModBot(discord.Client):
             if self.reports[self.curr_report_author].mod_complete():
                 await mod_channel.send("Thank you for your review.")
                 if self.reports[self.curr_report_author].virtual_kidnapping:
-                    if self.reports[self.curr_report_author].fake:
+                    if not self.reports[self.curr_report_author].fake:
                         await self.reports[self.curr_report_author].author_channel.send(
                             "We have detected the user's messages to be malicious and have quarantined them. Our model has flagged the contents of their messages as potentially real. Please exercise caution and contact your local law enforcement."
                         )
@@ -172,46 +172,13 @@ class ModBot(discord.Client):
             return
 
         # Forward the message to the mod channel
-        mod_channel = self.mod_channels[message.guild.id]
-        await mod_channel.send(
-            f'Forwarded message:\n{message.author.name}: "{message.content}"'
-        )
-        scores = self.eval_text(message.content)
-        await mod_channel.send(self.code_format(scores))
-
-    # def eval_text(self, message):
-    #     """'
-    #     TODO: Once you know how you want to evaluate messages in your channel,
-    #     insert your code here! This will primarily be used in Milestone 3.
-    #     """
-    #     return message
+        # mod_channel = self.mod_channels[message.guild.id]
+        # await mod_channel.send(
+        #     f'Forwarded message:\n{message.author.name}: "{message.content}"'
+        # )
+        # scores = self.eval_text(message.content)
+        # await mod_channel.send(self.score_format(scores))
     
-    def eval_text(self, message):
-        """'
-        Use Google Perspective API to scan for toxicity and sexually explicit content.
-        """
-        message_score = analyze_message(message)
-        return message_score
-    
-    def score_format(self, scores):
-        """
-        Formats the scores json returned by Google Perspective API.
-        """
-        results = {}
-        results['scores'] = {}
-        results['scores']['toxicity'] = scores['attributeScores']['TOXICITY']['summaryScore']['value']
-        results['scores']['sexually_explicit'] = scores['attributeScores']['SEXUALLY_EXPLICIT']['summaryScore']['value']
-        results['scores']['threat'] = scores['attributeScores']['THREAT']['summaryScore']['value']
-
-        return results
-
-    def code_format(self, text):
-        """'
-        TODO: Once you know how you want to show that a message has been
-        evaluated, insert your code here for formatting the string to be
-        shown in the mod channel.
-        """
-        return "Evaluated: '" + text + "'"
 
 
 client = ModBot(

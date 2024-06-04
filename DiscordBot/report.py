@@ -1,7 +1,9 @@
 from enum import Enum, auto
 import discord
+import pprint
 import re
 from deepfake_detector import *
+from perspective_api import *
 
 
 class State(Enum):
@@ -167,7 +169,6 @@ class Report:
                     + "- `sh` for self-harm or suicidal intent\n"
                     + "- `ct` for credible threat of violence\n"
                     + "- `kt` for kidnapping threat"
-                    # TODO: maybe we should add an 'other' category here as well?
                 ]
             else:
                 return [
@@ -306,6 +307,8 @@ class Report:
                         
                         ans += "Text Evaluation: \n"
                         # TODO: text model scores/results
+                        scores = score_format(eval_text(self.message))
+                        ans += pprint.pformat(scores) + "\n\n"
 
                         return [
                             "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol.\n"
@@ -371,3 +374,4 @@ class Report:
 
     def mod_complete(self):
         return self.state == State.MOD_COMPLETE
+
