@@ -179,12 +179,12 @@ class ModBot(discord.Client):
         scores = self.eval_text(message.content)
         await mod_channel.send(self.code_format(scores))
 
-    def eval_text(self, message):
-        """'
-        TODO: Once you know how you want to evaluate messages in your channel,
-        insert your code here! This will primarily be used in Milestone 3.
-        """
-        return message
+    # def eval_text(self, message):
+    #     """'
+    #     TODO: Once you know how you want to evaluate messages in your channel,
+    #     insert your code here! This will primarily be used in Milestone 3.
+    #     """
+    #     return message
     
     def eval_text(self, message):
         """'

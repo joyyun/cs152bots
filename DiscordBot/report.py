@@ -1,6 +1,7 @@
 from enum import Enum, auto
 import discord
 import re
+from deepfake_detector import *
 
 
 class State(Enum):
@@ -53,6 +54,7 @@ class Report:
         self.block_user = False
         self.additional_message = None
         self.author_channel = None
+        self.attachments = None
 
     async def handle_message(self, message):
         """
@@ -102,6 +104,7 @@ class Report:
             self.state = State.MESSAGE_IDENTIFIED
             self.message = message.content
             self.message_author = message.author.name
+            self.attachments = message.attachments if  message.attachments else None
             return [
                 "I found this message:",
                 "```" + message.author.name + ": " + message.content + "```",
@@ -273,6 +276,7 @@ class Report:
             reply += f"Imminent danger: {self.imminent_danger}\n"
             reply += f"Virtual kidnapping: {self.virtual_kidnapping}\n"
             reply += f"Additional message: {self.additional_message}\n"
+            reply += f"Attachments: {self.attachments}\n"
             return [reply]
 
         if self.state == State.AWAITING_ABUSE_VERIFICATION:
@@ -292,9 +296,20 @@ class Report:
                         ]
                     else:
                         self.state = State.AWAITING_MODEL_RESULTS
+
+                        ans = "\n MODELS RESULTS: \n \n"
+                        ans += "Image Evaluation : \n"
+                        if self.attachments:
+                            ans = f"{ans} {predict_deepfake_nopreprocessing(self.attachments[0].url)} \n\n"
+                        else:
+                            ans += "< NO IMAGE FOUND > \n\n"
+                        
+                        ans += "Text Evaluation: \n"
+                        # TODO: text model scores/results
+
                         return [
                             "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol.\n"
-                            + "The reporter has confirmed that this report is a kidnapping threat. The next is to investigate if this report could be a case virtual kidnapping. Please run the message through our AI-detection models before completing the rest of this report review. \nAfter running through our models, is the message content AI-generated? Please respond with 'yes' or 'no'."
+                            + "The reporter has confirmed that this report is a kidnapping threat. The next is to investigate if this report could be a case virtual kidnapping. Please consult the results of our AI-detection models evalutaions below before completing the rest of this report review. \n" + ans + "\n After considerations using our models, is the message content AI-generated/Fake ? Please respond with 'yes' or 'no'."
                         ]
 
             elif message.content.lower() == "no":
