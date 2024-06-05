@@ -160,6 +160,13 @@ class ModBot(discord.Client):
             )
             print("Message: ", message)
             print("Responses: ", responses)
+            report_count = self.get_report_count(
+                self.reports[self.curr_report_author].message_author_id
+            )
+            if report_count > 0:
+                await mod_channel.send(
+                    f"This user has been previously reported {report_count} times for malicious behavior."
+                )
             for r in responses:
                 await mod_channel.send(r)
 
@@ -183,6 +190,11 @@ class ModBot(discord.Client):
         # Only handle messages sent in the "group-#" channel
         if not message.channel.name == f"group-{self.group_num}":
             return
+
+    def get_report_count(self, user_id):
+        # Query the database to check if the user ID exists
+        report_count = self.collection.count_documents({"reported_user_id": user_id})
+        return report_count
 
     def save_report(self, reporter_user_id, report):
         report_data = {
