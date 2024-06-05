@@ -49,6 +49,7 @@ class Report:
         self.client = client
         self.message = None
         self.message_author = None
+        self.message_author_id = None
         self.imminent_danger = False
         self.virtual_kidnapping = False
         self.message_type = None  # photo or text?
@@ -106,7 +107,8 @@ class Report:
             self.state = State.MESSAGE_IDENTIFIED
             self.message = message.content
             self.message_author = message.author.name
-            self.attachments = message.attachments if  message.attachments else None
+            self.message_author_id = message.author.id
+            self.attachments = message.attachments if message.attachments else None
             return [
                 "I found this message:",
                 "```" + message.author.name + ": " + message.content + "```",
@@ -304,7 +306,7 @@ class Report:
                             ans = f"{ans} {predict_deepfake_nopreprocessing(self.attachments[0].url)} \n\n"
                         else:
                             ans += "< NO IMAGE FOUND > \n\n"
-                        
+
                         ans += "Text Evaluation: \n"
                         # TODO: text model scores/results
                         scores = score_format(eval_text(self.message))
@@ -312,7 +314,9 @@ class Report:
 
                         return [
                             "This report has been confirmed as an abuse violation. We will move forward with the report-handling protocol.\n"
-                            + "The reporter has confirmed that this report is a kidnapping threat. The next is to investigate if this report could be a case virtual kidnapping. Please consult the results of our AI-detection models evalutaions below before completing the rest of this report review. \n" + ans + "\n After considerations using our models, is the message content AI-generated/Fake ? Please respond with 'yes' or 'no'."
+                            + "The reporter has confirmed that this report is a kidnapping threat. The next is to investigate if this report could be a case virtual kidnapping. Please consult the results of our AI-detection models evalutaions below before completing the rest of this report review. \n"
+                            + ans
+                            + "\n After considerations using our models, is the message content AI-generated/Fake ? Please respond with 'yes' or 'no'."
                         ]
 
             elif message.content.lower() == "no":
@@ -346,11 +350,13 @@ class Report:
                 return [
                     "I'm sorry, I didn't understand that. Please respond with `yes` or `no`."
                 ]
-            
+
         if self.state == State.AUTO_FLAGGED:
             self.state = State.AWAITING_AUTO_FLAGGED_REVIEW
-            return ["Please review the contents of this report and decide if this is a safety violation. Respond with 'yes' or 'no'."]
-        
+            return [
+                "Please review the contents of this report and decide if this is a safety violation. Respond with 'yes' or 'no'."
+            ]
+
         if self.state == State.AWAITING_AUTO_FLAGGED_REVIEW:
             if message.content.lower() == "yes":
                 self.state = State.MOD_COMPLETE
@@ -359,9 +365,7 @@ class Report:
                 ]
             elif message.content.lower() == "no":
                 self.state = State.ABUSE_DENIED
-                return [
-                    "This auto-flagged report is not an abuse violation."
-                ]
+                return ["This auto-flagged report is not an abuse violation."]
             else:
                 return [
                     "I'm sorry, I didn't understand that. Please respond with 'yes' or 'no'."
@@ -374,4 +378,3 @@ class Report:
 
     def mod_complete(self):
         return self.state == State.MOD_COMPLETE
-

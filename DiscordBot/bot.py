@@ -6,11 +6,17 @@ import json
 import logging
 import re
 import requests
+import pymongo
+from pymongo import MongoClient
+import datetime
 from report import Report, State
 import pdb
 from perspective_api import *
+from dotenv import load_dotenv
 
-# from moderator import *
+# Load environment variables from the .env file
+load_dotenv()
+ATLAS_URI = os.getenv("ATLAS_URI")
 
 # Set up logging to the console
 logger = logging.getLogger("discord")
@@ -34,12 +40,17 @@ class ModBot(discord.Client):
     def __init__(self, group_num=None, guild_id=None):
         intents = discord.Intents.default()
         intents.message_content = True
-        super().__init__(command_prefix=".", intents=intents)
+        super().__init__(intents=intents)
         self.group_num = group_num
         self.guild_id = guild_id
         self.mod_channels = {}  # Map from guild to the mod channel id for that guild
         self.reports = {}  # Map from user IDs to the state of their report
         self.curr_report_author = None  # Stores the author of the current report
+
+        # Connect to MongoDB
+        self.client = MongoClient(ATLAS_URI)
+        self.db = self.client["DiscordBot"]
+        self.collection = self.db["usernames"]
 
     async def on_ready(self):
         print(f"{self.user.name} has connected to Discord! It is these guilds:")
@@ -81,8 +92,12 @@ class ModBot(discord.Client):
         scores = score_format(eval_text(message.content))
 
         eval = None
-        if scores['scores']['threat'] > 0.6 or scores['scores']['toxicity'] > 0.6 or scores['scores']['sexually_explicit'] > 0.6:
-            eval = "Alert! This message has been auto-flagged by our system." 
+        if (
+            scores["scores"]["threat"] > 0.6
+            or scores["scores"]["toxicity"] > 0.6
+            or scores["scores"]["sexually_explicit"] > 0.6
+        ):
+            eval = "Alert! This message has been auto-flagged by our system."
             eval += f"\n\nMessage:: {message.content}"
             eval += f"\n\nScores: {scores}"
             await mod_channel.send(eval)
@@ -111,7 +126,7 @@ class ModBot(discord.Client):
             if author_id not in self.reports:
                 self.reports[author_id] = Report(self)
 
-            # Let the report class handle this message; forward all the messages it returns to uss
+            # Let the report class handle this message; forward all the messages it returns to us
             responses = await self.reports[author_id].handle_message(message)
             for r in responses:
                 await message.channel.send(r)
@@ -120,9 +135,7 @@ class ModBot(discord.Client):
             if self.reports[author_id].report_complete():
                 self.curr_report_author = author_id
                 # Forward the report to the mod channel
-                await mod_channel.send(  
-                    f"Report Submitted."
-                )
+                await mod_channel.send(f"Report Submitted.")
 
                 # Handle moderator review
                 self.reports[author_id].state = State.MODERATOR_REVIEW
@@ -137,8 +150,6 @@ class ModBot(discord.Client):
             responses = await self.reports[author_id].handle_message(message)
             for r in responses:
                 await mod_channel.send(r)
-
-            # self.reports.pop(author_id)
 
     async def handle_channel_message(self, message):
         # Moderator review flow
@@ -163,7 +174,9 @@ class ModBot(discord.Client):
                         await self.reports[self.curr_report_author].author_channel.send(
                             "We have detected the user's messages to be malicious and have quarantined them. Our model has flagged the contents of their messages as AI-generated. Although the threat is likely false, please exercise caution and contact your local law enforcement."
                         )
-
+                self.save_report(
+                    self.curr_report_author, self.reports[self.curr_report_author]
+                )
                 self.reports.pop(self.curr_report_author)
             return
 
@@ -171,18 +184,15 @@ class ModBot(discord.Client):
         if not message.channel.name == f"group-{self.group_num}":
             return
 
-        # Forward the message to the mod channel
-        # mod_channel = self.mod_channels[message.guild.id]
-        # await mod_channel.send(
-        #     f'Forwarded message:\n{message.author.name}: "{message.content}"'
-        # )
-        # scores = self.eval_text(message.content)
-        # await mod_channel.send(self.score_format(scores))
-    
+    def save_report(self, reporter_user_id, report):
+        report_data = {
+            "reporter_user_id": reporter_user_id,
+            "reported_user_id": report.message_author_id,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc),
+        }
+        self.collection.insert_one(report_data)
+        print("Report saved to database")
 
 
-client = ModBot(
-    group_num = 27, 
-    guild_id = 1211760623969370122 
-)
+client = ModBot(group_num=27, guild_id=1211760623969370122)
 client.run(discord_token)
